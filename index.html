@@ -112,15 +112,28 @@
         let shapeSize = 30;
         let shapeX = shapeSize;
         let shapeY = canvas.height / 3;  // Start position (1/3 of the screen height)
-        let shapeSpeed = 2;  // Start at the speed for value 2
+        let shapeSpeed;
         let direction = 1;
+        let pauseTime = 500;  // Pause duration (in milliseconds)
+        let isPaused = false;  // Flag to track if the shape is paused
 
-        // Maximum speed corresponding to slider value 7 on the previous scale
         const maxSpeedAt7 = 7;
 
         // Map new slider value (1-30) to a speed scale, and halve the top speed
         function mapSpeed(value) {
-            return (value * maxSpeedAt7 / 7) / 4;  // Halve the top speed (divide by 4 instead of 2)
+            return (value * maxSpeedAt7 / 7) / 4;  // Halve the top speed (divide by 4)
+        }
+
+        // Function to initialize values based on the current state of the sliders
+        function initializeControls() {
+            // Set the speed based on the slider value
+            shapeSpeed = mapSpeed(parseInt(speedRange.value));
+            speedValueText.textContent = speedRange.value;  // Display the current speed value
+
+            // Initialize other controls if necessary
+            sizeValueText.textContent = sizeRange.value;
+            colorValueText.textContent = colorRange.value;
+            rightLimitValueText.textContent = rightLimitRange.value;
         }
 
         // Square group properties
@@ -206,8 +219,19 @@
             });
         }
 
+        // Function to handle the momentary pause at the boundaries
+        function handlePause(callback) {
+            isPaused = true;
+            setTimeout(() => {
+                isPaused = false;
+                callback();  // Resume movement after pause
+            }, pauseTime);
+        }
+
         // Update the position of the shape based on the right limit
         function updateShape() {
+            if (isPaused) return;  // Do not update position if paused
+
             const maxShapeX = canvas.width * rightLimitPercentage / 100 - shapeSize;
 
             shapeX += direction * shapeSpeed;
@@ -216,9 +240,11 @@
             if (shapeX >= maxShapeX) {
                 shapeX = maxShapeX;
                 direction = -1;  // Reverse direction if boundary is hit
+                handlePause(() => updateShape());  // Trigger pause at right boundary
             } else if (shapeX <= shapeSize) {
                 shapeX = shapeSize;
                 direction = 1;  // Reverse direction if boundary is hit
+                handlePause(() => updateShape());  // Trigger pause at left boundary
             }
         }
 
@@ -281,9 +307,15 @@
             requestAnimationFrame(gameLoop);  // Call the next frame
         }
 
-        // Initial setup
-        resizeCanvas();  // Set the canvas to fill the screen and position elements correctly
-        gameLoop();      // Start the game loop
+        // Initial setup function to call when the page loads
+        function start() {
+            resizeCanvas();          // Resize the canvas to fit the screen
+            initializeControls();    // Initialize control values (like speed) based on sliders
+            gameLoop();              // Start the game loop
+        }
+
+        // Call the start function to initialize everything when the page loads
+        start();
     </script>
 </body>
 </html>
