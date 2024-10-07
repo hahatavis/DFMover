@@ -13,73 +13,106 @@
             display: block;
             background-color: #556B2F;  /* Dull green background */
         }
-        .controls {
+        .controls-wrapper {
+            display: flex;
+            flex-direction: column; /* Stacks title and controls vertically */
+            align-items: center;
             position: absolute;
             top: 10px;
-            left: 10px;
-            background-color: rgba(255, 255, 255, 0.8);
+            left: 0;
+            right: 0;
             padding: 10px;
+            background-color: rgba(255, 255, 255, 0.8);
             border-radius: 8px;
-            text-align: left;
+        }
+        .controls-container {
+            display: flex;
+            justify-content: space-evenly;
+            width: 100%;
+        }
+        .controls {
+            display: flex;
+            flex-direction: column;  /* Stack controls vertically */
+            margin: 0 10px;
         }
         label {
-            display: block;
             margin-bottom: 10px;
         }
         input[type="range"] {
             width: 150px;
         }
         h1 {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 36px;
+            font-size: 22px; /* 60% smaller title */
+            color: black;  /* Changed to black */
             text-align: center;
-            margin: 0;
+            margin: 0 0 10px 0; /* Add margin at the bottom to separate from controls */
         }
     </style>
 </head>
 <body>
     <!-- Title Text -->
-    <h1>DFMover</h1>
+    <div class="controls-wrapper">
+        <h1>DFMover</h1>
+
+        <!-- Control box with two stacked controls per section, horizontal across the top -->
+        <div class="controls-container">
+            <!-- Speed and Size Controls -->
+            <div class="controls">
+                <label for="speedRange">Speed: <span id="speedValue">2</span></label>
+                <input type="range" id="speedRange" min="1" max="30" value="2">
+                <label for="sizeRange">Size: <span id="sizeValue">30</span></label>
+                <input type="range" id="sizeRange" min="2" max="100" value="30">
+            </div>
+            <!-- Color and Right Limit Controls -->
+            <div class="controls">
+                <label for="colorRange">Color (0=Black, 255=White, default=212): <span id="colorValue">212</span></label>
+                <input type="range" id="colorRange" min="0" max="255" value="212">
+                <label for="rightLimitRange">Right Limit (%): <span id="rightLimitValue">100</span></label>
+                <input type="range" id="rightLimitRange" min="10" max="100" value="100">
+            </div>
+            <!-- Shape Selector (Circle, Square, Diamond) -->
+            <div class="controls">
+                <label>Shape:</label>
+                <label><input type="radio" name="shape" value="circle" checked> Circle</label>
+                <label><input type="radio" name="shape" value="square"> Square</label>
+                <label><input type="radio" name="shape" value="diamond"> Diamond</label>
+            </div>
+            <!-- Gridlines Toggle -->
+            <div class="controls">
+                <label><input type="checkbox" id="gridToggle"> Show Grid Lines</label>
+            </div>
+        </div>
+    </div>
 
     <canvas id="gameCanvas"></canvas>
-
-    <!-- Control box with speed, size, grid line toggle, and color control -->
-    <div class="controls">
-        <label for="speedRange">Speed: <span id="speedValue">2</span></label>
-        <input type="range" id="speedRange" min="1" max="30" value="2">
-        <label for="sizeRange">Size: <span id="sizeValue">30</span></label>
-        <input type="range" id="sizeRange" min="5" max="100" value="30">
-        <label for="colorRange">Color (0=Black, 255=White, default=212): <span id="colorValue">212</span></label>
-        <input type="range" id="colorRange" min="0" max="255" value="212">
-        <label><input type="checkbox" id="gridToggle"> Show Grid Lines</label>
-    </div>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
 
-        // HTML controls for speed, size, color, and grid toggle
+        // HTML controls for speed, size, color, grid, right limit, and shape
         const speedRange = document.getElementById('speedRange');
         const sizeRange = document.getElementById('sizeRange');
         const colorRange = document.getElementById('colorRange');
+        const rightLimitRange = document.getElementById('rightLimitRange');
         const speedValueText = document.getElementById('speedValue');
         const sizeValueText = document.getElementById('sizeValue');
         const colorValueText = document.getElementById('colorValue');
+        const rightLimitValueText = document.getElementById('rightLimitValue');
         const gridToggle = document.getElementById('gridToggle');
+        const shapeRadios = document.getElementsByName('shape');
 
-        // Variables to control grid lines visibility and circle color
+        // Variables to control grid lines visibility, circle color, right limit, and shape
         let showGridLines = false;
         let circleColorValue = 212;  // Default color matches the squares (rgb(212, 212, 212))
+        let rightLimitPercentage = 100;  // Default right limit is 100% (full width)
+        let selectedShape = 'circle';  // Default shape is circle
 
         // Circle properties
-        let circleRadius = 30;
-        let circleX = circleRadius;
-        let circleY = canvas.height / 3;  // Start position (1/3 of the screen height)
-        let circleSpeed = 2;  // Start at the speed for value 2
+        let shapeSize = 30;
+        let shapeX = shapeSize;
+        let shapeY = canvas.height / 3;  // Start position (1/3 of the screen height)
+        let shapeSpeed = 2;  // Start at the speed for value 2
         let direction = 1;
 
         // Maximum speed corresponding to slider value 7 on the previous scale
@@ -87,7 +120,7 @@
 
         // Map new slider value (1-30) to a speed scale, and halve the top speed
         function mapSpeed(value) {
-            return (value * maxSpeedAt7 / 7) / 2;  // Halve the speed
+            return (value * maxSpeedAt7 / 7) / 4;  // Halve the top speed (divide by 4 instead of 2)
         }
 
         // Square group properties
@@ -102,8 +135,8 @@
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
 
-            // Update circle y position to stay vertically centered
-            circleY = canvas.height / 3;  // Adjust circle Y position to be in the top 1/3 of the screen
+            // Update shape y position to stay vertically centered
+            shapeY = canvas.height / 3;  // Adjust shape Y position to be in the top 1/3 of the screen
             updateGroupPositions(); // Recalculate positions of the squares
         }
 
@@ -114,32 +147,44 @@
             groups[2].y = canvas.height - 50;   // Group C
         }
 
-        // Draw grid lines spanning the full width and with half the thickness
+        // Draw grid lines spanning the width based on right limit
         function drawGridLines() {
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 1;  // Half the thickness of the previous line
 
-            // Top grid line, half a circle radius above the circle's path
+            // Top grid line, half a shape radius above the shape's path
             ctx.beginPath();
-            ctx.moveTo(0, circleY - circleRadius * 1.5);  // Start from left edge
-            ctx.lineTo(canvas.width, circleY - circleRadius * 1.5);  // Span full width
+            ctx.moveTo(0, shapeY - shapeSize * 1.5);  // Start from left edge
+            ctx.lineTo(canvas.width * rightLimitPercentage / 100, shapeY - shapeSize * 1.5);  // Span to right limit
             ctx.stroke();
 
-            // Bottom grid line, half a circle radius below the circle's path
+            // Bottom grid line, half a shape radius below the shape's path
             ctx.beginPath();
-            ctx.moveTo(0, circleY + circleRadius * 1.5);  // Start from left edge
-            ctx.lineTo(canvas.width, circleY + circleRadius * 1.5);  // Span full width
+            ctx.moveTo(0, shapeY + shapeSize * 1.5);  // Start from left edge
+            ctx.lineTo(canvas.width * rightLimitPercentage / 100, shapeY + shapeSize * 1.5);  // Span to right limit
             ctx.stroke();
         }
 
-        // Draw a circle
-        function drawCircle() {
-            const circleColor = `rgb(${circleColorValue}, ${circleColorValue}, ${circleColorValue})`;  // Set color from slider
+        // Draw the shape (Circle, Square, or Diamond)
+        function drawShape() {
+            const shapeColor = `rgb(${circleColorValue}, ${circleColorValue}, ${circleColorValue})`;  // Set color from slider
+
+            ctx.fillStyle = shapeColor;
             ctx.beginPath();
-            ctx.arc(circleX, circleY, circleRadius, 0, Math.PI * 2, false);
-            ctx.fillStyle = circleColor;
+
+            if (selectedShape === 'circle') {
+                ctx.arc(shapeX, shapeY, shapeSize, 0, Math.PI * 2, false);  // Circle shape
+            } else if (selectedShape === 'square') {
+                ctx.fillRect(shapeX - shapeSize, shapeY - shapeSize, shapeSize * 2, shapeSize * 2);  // Square shape
+            } else if (selectedShape === 'diamond') {
+                ctx.moveTo(shapeX, shapeY - shapeSize); // Top vertex
+                ctx.lineTo(shapeX + shapeSize, shapeY); // Right vertex
+                ctx.lineTo(shapeX, shapeY + shapeSize); // Bottom vertex
+                ctx.lineTo(shapeX - shapeSize, shapeY); // Left vertex
+                ctx.closePath();  // Close the diamond shape
+            }
+
             ctx.fill();
-            ctx.closePath();
         }
 
         // Draw square groups
@@ -154,32 +199,46 @@
             });
         }
 
-        // Update the position of the circle
-        function updateCircle() {
-            circleX += direction * circleSpeed;
-            if (circleX + circleRadius >= canvas.width || circleX - circleRadius <= 0) {
+        // Update the position of the shape based on the right limit
+        function updateShape() {
+            const maxShapeX = canvas.width * rightLimitPercentage / 100 - shapeSize;
+
+            shapeX += direction * shapeSpeed;
+            if (shapeX >= maxShapeX || shapeX <= shapeSize) {
                 direction *= -1;  // Reverse direction if boundary is hit
             }
         }
 
         // Event listeners for HTML range inputs and checkbox
         speedRange.addEventListener('input', function () {
-            circleSpeed = mapSpeed(parseInt(this.value));  // Map the slider value to the new speed scale
+            shapeSpeed = mapSpeed(parseInt(this.value));  // Map the slider value to the new speed scale
             speedValueText.textContent = this.value;
         });
 
         sizeRange.addEventListener('input', function () {
-            circleRadius = parseInt(this.value);
+            shapeSize = parseInt(this.value);  // Update the shape size
             sizeValueText.textContent = this.value;
         });
 
         colorRange.addEventListener('input', function () {
-            circleColorValue = parseInt(this.value);  // Update circle color value
+            circleColorValue = parseInt(this.value);  // Update shape color value
             colorValueText.textContent = this.value;
+        });
+
+        rightLimitRange.addEventListener('input', function () {
+            rightLimitPercentage = parseInt(this.value);  // Update the right limit percentage
+            rightLimitValueText.textContent = this.value;
         });
 
         gridToggle.addEventListener('change', function () {
             showGridLines = this.checked;
+        });
+
+        // Update selected shape when a radio button is clicked
+        shapeRadios.forEach(radio => {
+            radio.addEventListener('change', function () {
+                selectedShape = this.value;
+            });
         });
 
         // Handle window resizing
@@ -196,9 +255,9 @@
                 drawGridLines();
             }
 
-            drawCircle();   // Draw the moving circle
+            drawShape();   // Draw the selected shape
             drawGroups();   // Draw the groups of squares
-            updateCircle();  // Update the circle position
+            updateShape();  // Update the shape position
             requestAnimationFrame(gameLoop);  // Call the next frame
         }
 
