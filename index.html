@@ -108,7 +108,7 @@
         let rightLimitPercentage = 100;  // Default right limit is 100% (full width)
         let selectedShape = 'circle';  // Default shape is circle
 
-        // Circle properties
+        // Shape properties
         let shapeSize = 30;
         let shapeX = shapeSize;
         let shapeY = canvas.height / 3;  // Start position (1/3 of the screen height)
@@ -130,12 +130,19 @@
             { size: 20, xStart: 550, y: canvas.height - 50, color: 'rgb(212, 212, 212)' }     // Group C
         ];
 
-        // Function to resize the canvas to fill the window
+        // Function to resize the canvas to fill the window and ensure the shape is within bounds
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
 
-            // Update shape y position to stay vertically centered
+            // Ensure shape stays within bounds after resizing
+            const maxShapeX = canvas.width * rightLimitPercentage / 100 - shapeSize;
+            if (shapeX > maxShapeX) {
+                shapeX = maxShapeX;  // Adjust shape to the new right limit
+            } else if (shapeX < shapeSize) {
+                shapeX = shapeSize;  // Ensure it doesn't go beyond the left limit
+            }
+
             shapeY = canvas.height / 3;  // Adjust shape Y position to be in the top 1/3 of the screen
             updateGroupPositions(); // Recalculate positions of the squares
         }
@@ -204,8 +211,14 @@
             const maxShapeX = canvas.width * rightLimitPercentage / 100 - shapeSize;
 
             shapeX += direction * shapeSpeed;
-            if (shapeX >= maxShapeX || shapeX <= shapeSize) {
-                direction *= -1;  // Reverse direction if boundary is hit
+
+            // Check if the shape goes beyond the new right limit and snap it back if necessary
+            if (shapeX >= maxShapeX) {
+                shapeX = maxShapeX;
+                direction = -1;  // Reverse direction if boundary is hit
+            } else if (shapeX <= shapeSize) {
+                shapeX = shapeSize;
+                direction = 1;  // Reverse direction if boundary is hit
             }
         }
 
@@ -228,6 +241,13 @@
         rightLimitRange.addEventListener('input', function () {
             rightLimitPercentage = parseInt(this.value);  // Update the right limit percentage
             rightLimitValueText.textContent = this.value;
+
+            // Ensure the shape stays within the new right limit immediately
+            const maxShapeX = canvas.width * rightLimitPercentage / 100 - shapeSize;
+            if (shapeX > maxShapeX) {
+                shapeX = maxShapeX;  // Snap the shape back to the new right limit
+                direction = -1;  // Reverse direction after snapping back
+            }
         });
 
         gridToggle.addEventListener('change', function () {
