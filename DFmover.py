@@ -6,12 +6,12 @@ import time
 pygame.init()
 
 # Set the initial dimensions of the screen (width, height)
-screen = pygame.display.set_mode((1200, 400), pygame.RESIZABLE)  # Allow window resizing
+screen = pygame.display.set_mode((1200, 600), pygame.RESIZABLE)  # Increased height to 600
 pygame.display.set_caption('Moving Circle with Adjustable Speed and Size')
 
 # Define colors
 DULL_GREEN = (85, 107, 47)  # Dull green background
-GREY = (169, 169, 169)  # Grey circle
+GREY = (169, 169, 169)  # Grey color for both circle and squares
 BLACK = (0, 0, 0)  # Text color
 
 # Font for displaying text
@@ -26,6 +26,25 @@ direction = 1  # 1 means moving right, -1 means moving left
 
 # Pause duration in seconds when the circle reaches the edges
 pause_duration = 0.5  # Half a second
+
+# Square group properties (adjusted y-coordinates for better visibility and grey color for all squares)
+groups = {
+    'A': {'size': 40, 'x_start': 50, 'y': 350, 'color': GREY},    # Group A (grey squares)
+    'B': {'size': 30, 'x_start': 300, 'y': 450, 'color': GREY},   # Group B (grey squares)
+    'C': {'size': 20, 'x_start': 550, 'y': 550, 'color': GREY}    # Group C (grey squares)
+}
+
+# Function to draw the squares in each group with consistent gaps
+def draw_group(label, x_start, y, base_size, color):
+    spacing = 15  # Fixed gap between squares
+    for i in range(5):
+        square_size = base_size - i * 5  # Squares get smaller from left to right
+        square_x = x_start + i * (base_size + spacing)  # X position calculated using the initial base size + fixed spacing
+        pygame.draw.rect(screen, color, (square_x, y, square_size, square_size))
+
+    # Draw the label above the group
+    label_text = font.render(label, True, BLACK)
+    screen.blit(label_text, (x_start, y - 40))  # Label above squares
 
 def draw_menu():
     """Display instructions for the user to adjust the speed and size."""
@@ -87,6 +106,10 @@ while True:
 
     # Draw the circle
     pygame.draw.circle(screen, GREY, (circle_x, circle_y), circle_radius)
+
+    # Draw the groups of squares (A, B, and C) below the circle
+    for label, group in groups.items():
+        draw_group(label, group['x_start'], group['y'], group['size'], group['color'])
 
     # Display the menu for adjusting speed and size
     draw_menu()
