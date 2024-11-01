@@ -165,10 +165,33 @@
     </div>
 
     <canvas id="gameCanvas"></canvas>
+    <canvas id="mirageCanvas"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const mirageCanvas = document.getElementById('mirageCanvas');
+        const mirageCtx = mirageCanvas.getContext('2d');
+        mirageCanvas.width = canvas.width;
+        mirageCanvas.height = canvas.height;
+        mirageCanvas.style.position = 'absolute';
+        mirageCanvas.style.top = '0';
+        mirageCanvas.style.left = '0';
+        mirageCanvas.style.zIndex = '1';
+        mirageCanvas.style.pointerEvents = 'none';
+        // Game canvas setup
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.zIndex = '0';
+
+        // Mirage canvas setup for layering above the game canvas
+        mirageCanvas.style.position = 'absolute';
+        mirageCanvas.style.top = '0';
+        mirageCanvas.style.left = '0';
+        mirageCanvas.style.zIndex = '1';
+        mirageCanvas.style.pointerEvents = 'none';  // Ensure clicks pass through
+
         const fieldImg = new Image();
         fieldImg.src = 'field.jpg';
 
@@ -214,13 +237,17 @@
         }
 
         function drawBackground() {
-            if (useFieldBackground) {
+            if (useFieldBackground && fieldImg.complete) {
                 ctx.drawImage(fieldImg, 0, 0, canvas.width, canvas.height);
+                console.log("Drawing field image");
             } else {
                 ctx.fillStyle = '#556B2F';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+                console.log("Drawing fallback color");
             }
         }
+
+
 
         function initializeControls() {
             shapeSpeed = mapSpeed(parseInt(speedRange.value));
@@ -246,6 +273,8 @@
 
             shapeY = canvas.height / 3;
             updateGroupPositions();
+            mirageCanvas.width = canvas.width;
+            mirageCanvas.height = canvas.height;
         }
 
         function updateGroupPositions() {
@@ -296,6 +325,32 @@
                     ctx.fillRect(x, group.y, squareSize, squareSize);
                 }
             });
+        }
+        let mirageOffset = 0;
+
+        function drawMirageEffect() {
+            mirageCtx.clearRect(0, 0, mirageCanvas.width, mirageCanvas.height);
+
+            mirageCtx.globalAlpha = 0.08;  // Adjust for subtle effect
+            mirageCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            
+            const waveHeight = 10;
+            const waveWidth = 40;
+
+            // Create shimmering waves
+            for (let y = 0; y < mirageCanvas.height; y += waveHeight * 2) {
+                mirageCtx.beginPath();
+                for (let x = 0; x < mirageCanvas.width; x += waveWidth) {
+                    const waveOffset = Math.sin((x + mirageOffset) / 15) * 3;
+                    mirageCtx.rect(x, y + waveOffset, waveWidth, waveHeight);
+                }
+                mirageCtx.fill();
+            }
+
+            mirageOffset += 0.5;
+            if (mirageOffset > waveWidth) mirageOffset = 0;
+
+            mirageCtx.globalAlpha = 1;
         }
 
         function updateShape() {
@@ -483,19 +538,29 @@
 
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBackground();
+            drawBackground();           // Draw background first
             if (showGridLines) drawGridLines();
-            drawShape();
-            drawGroups();
-            updateShape();
+            drawShape();                 // Draw main shape
+            drawGroups();                // Draw targets/groups
+            updateShape();               // Update target positions
+
+            drawMirageEffect();          // Add mirage effect overlay
+
             requestAnimationFrame(gameLoop);
         }
+
+
 
         fieldImg.onload = () => {
             resizeCanvas();
             initializeControls();
             gameLoop();
         };
+
+        fieldImg.onerror = () => {
+            console.error("Error loading background image.");
+        };
+
 
         window.addEventListener('resize', resizeCanvas);
     </script>
