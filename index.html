@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DFMover</title>
+    <link rel="icon" href="images/favicon.ico" type="image/x-icon">
+    <style>
+    body {
+        margin: 0;
+        overflow: hidden; /* Prevent scrollbars */
+        font-family: Arial, sans-serif;
+    }
+    canvas {
+        display: block;
+        background-color: #556B2F;  /* Fallback color */
+    }
+    .controls-wrapper {
+        display: flex;
+        flex-direction: column; /* Stacks title and controls vertically */
+        align-items: center;
+        position: absolute;
+        top: 5px;
+        left: 0;
+        right: 0;
+        padding: 5px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+        z-index: 10; /* Ensure the controls are above the canvas */
+    }
+    .controls-container {
+        display: flex;
+        justify-content: space-evenly;
+        width: 100%;
+        padding: 0 10px;
+    }
+    .controls {
+        display: flex;
+        flex-direction: column; /* Stack controls vertically */
+        margin: 0 5px;
+    }
+    label {
+        font-size: 12px;
+        margin-bottom: 5px;
+    }
+    input[type="range"] {
+        width: 100px;
+    }
+    h1 {
+        font-size: 16px;
+        color: black;
+        text-align: center;
+        margin: 0 0 5px 0;
+        display: inline-block;
+    }
+
+    .version {
+        font-size: 12px;
+        color: gray;
+        margin-left: 10px;
+        vertical-align: middle;
+    }
+
+    #toggle-controls {
+        margin-top: 5px;
+        padding: 5px 10px;
+        font-size: 12px;
+        cursor: pointer;
+        border: none;
+        background-color: #333;
+        color: white;
+        border-radius: 5px;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    /* Commented out MPH Display CSS */
+    /*
+    #mphDisplay {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 14px;
+        color: black;
+        background-color: rgba(255, 255, 255, 0.8);
+        padding: 5px;
+        border-radius: 5px;
+        z-index: 10;
+    }
+    */
+
+    /* Media query for screens with a max width of 768px (typical tablet/phone width) */
+    @media (max-width: 768px) and (orientation: landscape) {
+        .controls-wrapper {
+            top: auto;
+            bottom: 0;  /* Position the controls at the bottom */
+            height: 15%; /* Reduce the height of the controls wrapper */
+            padding: 3px;
+        }
+        canvas {
+            height: 85%; /* Ensure the canvas takes up the rest of the space */
+        }
+        .controls-container {
+            flex-direction: row;
+            flex-wrap: wrap;
+        }
+        .controls {
+            margin: 2px 5px;
+        }
+        label {
+            font-size: 10px;
+        }
+        input[type="range"] {
+            width: 80px;
+        }
+        h1 {
+            font-size: 12px;
+            margin: 2px 0;
+        }
+    }
+
+    </style>
+</head>
+<body>
+    <!-- MPH Display Commented Out -->
+    <!-- <div id="mphDisplay">500 yard MPH (beta testing): 0.00</div> -->
+
+    <!-- Title Text and Toggle Button -->
+    <div class="controls-wrapper">
+        <h1>DFMover <span class="version">v1.13</span></h1>
+        <button id="toggle-controls">Hide Controls</button>
+        <!-- Control box with two stacked controls per section, horizontal across the top -->
+        <div class="controls-container" id="controls-container">
+            <!-- Speed and Size Controls -->
+            <div class="controls">
+                <label for="speedRange">Speed: <span id="speedValue">2</span></label>
+                <input type="range" id="speedRange" min="1" max="30" value="2">
+                <label for="sizeRange">Size: <span id="sizeValue">30</span></label>
+                <input type="range" id="sizeRange" min="2" max="100" value="30">
+            </div>
+            <!-- Color, Left Limit, and Right Limit Controls -->
+            <div class="controls">
+                <label for="colorRange">Color (0=Black, 255=White, default=212): <span id="colorValue">212</span></label>
+                <input type="range" id="colorRange" min="0" max="255" value="212">
+                <label for="leftLimitRange">Left Limit (%): <span id="leftLimitValue">0</span></label>
+                <input type="range" id="leftLimitRange" min="0" max="90" value="0">
+                <label for="rightLimitRange">Right Limit (%): <span id="rightLimitValue">100</span></label>
+                <input type="range" id="rightLimitRange" min="10" max="100" value="100">
+            </div>
+            <!-- Shape Selector (Circle, Square, Diamond) -->
+            <div class="controls">
+                <label>Shape:</label>
+                <label><input type="radio" name="shape" value="circle" checked> Circle</label>
+                <label><input type="radio" name="shape" value="square"> Square</label>
+                <label><input type="radio" name="shape" value="diamond"> Diamond</label>
+            </div>
+            <!-- Background Toggle, Gridlines Toggle, and Pause Button -->
+            <div class="controls">
+                <label><input type="checkbox" id="backgroundToggle"> Use Field Background</label>
+                <label><input type="checkbox" id="gridToggle"> Show Grid Lines</label>
+                <button id="pause-button">Pause</button>
+            </div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const fieldImg = new Image();
+        fieldImg.src = 'field.jpg';
+
+        const speedRange = document.getElementById('speedRange');
+        const sizeRange = document.getElementById('sizeRange');
+        const colorRange = document.getElementById('colorRange');
+        const leftLimitRange = document.getElementById('leftLimitRange');
+        const rightLimitRange = document.getElementById('rightLimitRange');
+        const speedValueText = document.getElementById('speedValue');
+        const sizeValueText = document.getElementById('sizeValue');
+        const colorValueText = document.getElementById('colorValue');
+        const leftLimitValueText = document.getElementById('leftLimitValue');
+        const rightLimitValueText = document.getElementById('rightLimitValue');
+        const gridToggle = document.getElementById('gridToggle');
+        const backgroundToggle = document.getElementById('backgroundToggle');
+        const shapeRadios = document.getElementsByName('shape');
+        const pauseButton = document.getElementById('pause-button');
+
+        let showGridLines = false;
+        let useFieldBackground = false;
+        let circleColorValue = 212;
+        let leftLimitPercentage = 0;
+        let rightLimitPercentage = 100;
+        let selectedShape = 'circle';
+        let isPaused = false;
+        let isDragging = false;
+        let isDraggingGroup = false;
+        let draggedGroup = null;
+        let isPausedAtEnd = false;
+
+        let shapeSize = 30;
+        let shapeX = shapeSize;
+        let shapeY = canvas.height / 3;
+        let shapeSpeed;
+        let direction = 1;
+        const maxSpeedAt7 = 7;
+
+        const pauseDuration = 300; // Pause duration in milliseconds
+        let lastPauseTime = 0;
+
+        function mapSpeed(value) {
+            return (value * maxSpeedAt7 / 7) / 4;
+        }
+
+        function drawBackground() {
+            if (useFieldBackground) {
+                ctx.drawImage(fieldImg, 0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = '#556B2F';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+
+        function initializeControls() {
+            shapeSpeed = mapSpeed(parseInt(speedRange.value));
+            speedValueText.textContent = speedRange.value;
+            sizeValueText.textContent = sizeRange.value;
+            colorValueText.textContent = colorRange.value;
+            leftLimitValueText.textContent = leftLimitRange.value;
+            rightLimitValueText.textContent = rightLimitRange.value;
+        }
+
+        const groups = [
+            { size: 40, xStart: 50, y: canvas.height - 250, color: 'rgb(212, 212, 212)' },
+            { size: 30, xStart: 300, y: canvas.height - 150, color: 'rgb(212, 212, 212)' },
+            { size: 20, xStart: 550, y: canvas.height - 50, color: 'rgb(212, 212, 212)' }
+        ];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const maxShapeX = canvas.width * rightLimitPercentage / 100 - shapeSize;
+            if (shapeX > maxShapeX) shapeX = maxShapeX;
+
+            shapeY = canvas.height / 3;
+            updateGroupPositions();
+        }
+
+        function updateGroupPositions() {
+            groups[0].y = canvas.height - 250;
+            groups[1].y = canvas.height - 150;
+            groups[2].y = canvas.height - 50;
+        }
+
+        function drawGridLines() {
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
+
+            ctx.beginPath();
+            ctx.moveTo(0, shapeY - shapeSize * 1.5);
+            ctx.lineTo(canvas.width * rightLimitPercentage / 100, shapeY - shapeSize * 1.5);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(0, shapeY + shapeSize * 1.5);
+            ctx.lineTo(canvas.width * rightLimitPercentage / 100, shapeY + shapeSize * 1.5);
+            ctx.stroke();
+        }
+
+        function drawShape() {
+            const shapeColor = `rgb(${circleColorValue}, ${circleColorValue}, ${circleColorValue})`;
+            ctx.fillStyle = shapeColor;
+            ctx.beginPath();
+            if (selectedShape === 'circle') {
+                ctx.arc(shapeX, shapeY, shapeSize, 0, Math.PI * 2, false);
+            } else if (selectedShape === 'square') {
+                ctx.fillRect(shapeX - shapeSize, shapeY - shapeSize, shapeSize * 2, shapeSize * 2);
+            } else if (selectedShape === 'diamond') {
+                ctx.moveTo(shapeX, shapeY - shapeSize);
+                ctx.lineTo(shapeX + shapeSize, shapeY);
+                ctx.lineTo(shapeX, shapeY + shapeSize);
+                ctx.lineTo(shapeX - shapeSize, shapeY);
+                ctx.closePath();
+            }
+            ctx.fill();
+        }
+
+        function drawGroups() {
+            groups.forEach(group => {
+                for (let i = 0; i < 5; i++) {
+                    const squareSize = group.size - i * 5;
+                    const x = group.xStart + i * (group.size + 15);
+                    ctx.fillStyle = group.color;
+                    ctx.fillRect(x, group.y, squareSize, squareSize);
+                }
+            });
+        }
+
+        function updateShape() {
+            if (isPaused || isDragging) return;
+
+            const minShapeX = canvas.width * leftLimitPercentage / 100 + shapeSize;
+            const maxShapeX = canvas.width * rightLimitPercentage / 100 - shapeSize;
+
+            // Handle pausing at edges
+            if ((shapeX >= maxShapeX && direction === 1) || (shapeX <= minShapeX && direction === -1)) {
+                if (!isPausedAtEnd) {  // Begin pause if not already in pause mode
+                    lastPauseTime = Date.now();
+                    isPausedAtEnd = true;
+                    return;
+                } else if (Date.now() - lastPauseTime >= pauseDuration) {
+                    // Resume movement after pause duration
+                    direction *= -1;
+                    isPausedAtEnd = false;  // Reset pause state for next edge
+                } else {
+                    return;  // Remain paused
+                }
+            }
+
+            // Update shape position if not paused
+            shapeX += direction * shapeSpeed;
+        }
+
+
+
+        speedRange.addEventListener('input', function () {
+            shapeSpeed = mapSpeed(parseInt(this.value));
+            speedValueText.textContent = this.value;
+        });
+
+        sizeRange.addEventListener('input', function () {
+            shapeSize = parseInt(this.value);
+            sizeValueText.textContent = this.value;
+        });
+
+        colorRange.addEventListener('input', function () {
+            circleColorValue = parseInt(this.value);
+            colorValueText.textContent = this.value;
+        });
+
+        leftLimitRange.addEventListener('input', function () {
+            leftLimitPercentage = parseInt(this.value);
+            leftLimitValueText.textContent = this.value;
+        });
+
+        rightLimitRange.addEventListener('input', function () {
+            rightLimitPercentage = parseInt(this.value);
+            rightLimitValueText.textContent = this.value;
+        });
+
+        gridToggle.addEventListener('change', function () {
+            showGridLines = this.checked;
+        });
+
+        backgroundToggle.addEventListener('change', function () {
+            useFieldBackground = this.checked;
+        });
+
+        shapeRadios.forEach(radio => {
+            radio.addEventListener('change', function () {
+                selectedShape = this.value;
+            });
+        });
+
+        pauseButton.addEventListener('click', function () {
+            isPaused = !isPaused;
+            pauseButton.textContent = isPaused ? 'Resume' : 'Pause';
+        });
+
+        const toggleButton = document.getElementById('toggle-controls');
+        const controlsContainer = document.getElementById('controls-container');
+        toggleButton.addEventListener('click', () => {
+            controlsContainer.classList.toggle('hidden');
+            toggleButton.textContent = controlsContainer.classList.contains('hidden') ? 'Show Controls' : 'Hide Controls';
+        });
+
+        canvas.addEventListener('mousedown', function (event) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            const clickY = event.clientY - rect.top;
+
+            const distanceFromShape = Math.sqrt((clickX - shapeX) ** 2 + (clickY - shapeY) ** 2);
+            if (distanceFromShape < shapeSize) {
+                isDragging = true;
+                return;
+            }
+
+            groups.forEach(group => {
+                if (
+                    clickX >= group.xStart &&
+                    clickX <= group.xStart + group.size * 5 &&
+                    clickY >= group.y &&
+                    clickY <= group.y + group.size
+                ) {
+                    isDraggingGroup = true;
+                    draggedGroup = group;
+                }
+            });
+        });
+
+        // Existing listeners and new ones for touch compatibility
+        canvas.addEventListener('mousedown', onMouseDown);
+        canvas.addEventListener('mousemove', onMouseMove);
+        canvas.addEventListener('mouseup', onMouseUp);
+
+        canvas.addEventListener('touchstart', onTouchStart);
+        canvas.addEventListener('touchmove', onTouchMove);
+        canvas.addEventListener('touchend', onTouchEnd);
+
+        // Event handling functions for both mouse and touch
+        function onMouseDown(event) {
+            handleStart(event.clientX, event.clientY);
+        }
+
+        function onMouseMove(event) {
+            handleMove(event.clientX, event.clientY);
+        }
+
+        function onMouseUp() {
+            handleEnd();
+        }
+
+        function onTouchStart(event) {
+            const touch = event.touches[0];
+            handleStart(touch.clientX, touch.clientY);
+            event.preventDefault();  // Prevents accidental scrolling
+        }
+
+        function onTouchMove(event) {
+            const touch = event.touches[0];
+            handleMove(touch.clientX, touch.clientY);
+            event.preventDefault();
+        }
+
+        function onTouchEnd() {
+            handleEnd();
+        }
+
+        // Shared drag-and-drop logic for both touch and mouse events
+        function handleStart(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const clickX = clientX - rect.left;
+            const clickY = clientY - rect.top;
+
+            const distanceFromShape = Math.sqrt((clickX - shapeX) ** 2 + (clickY - shapeY) ** 2);
+            if (distanceFromShape < shapeSize) {
+                isDragging = true;
+                return;
+            }
+
+            groups.forEach(group => {
+                if (
+                    clickX >= group.xStart &&
+                    clickX <= group.xStart + group.size * 5 &&
+                    clickY >= group.y &&
+                    clickY <= group.y + group.size
+                ) {
+                    isDraggingGroup = true;
+                    draggedGroup = group;
+                }
+            });
+        }
+
+        function handleMove(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            if (isDragging) {
+                shapeY = clientY - rect.top;
+            }
+            if (isDraggingGroup && draggedGroup) {
+                draggedGroup.xStart = clientX - rect.left - draggedGroup.size / 2;
+                draggedGroup.y = clientY - rect.top - draggedGroup.size / 2;
+            }
+        }
+
+        function handleEnd() {
+            isDragging = false;
+            isDraggingGroup = false;
+            draggedGroup = null;
+        }
+
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawBackground();
+            if (showGridLines) drawGridLines();
+            drawShape();
+            drawGroups();
+            updateShape();
+            requestAnimationFrame(gameLoop);
+        }
+
+        fieldImg.onload = () => {
+            resizeCanvas();
+            initializeControls();
+            gameLoop();
+        };
+
+        window.addEventListener('resize', resizeCanvas);
+    </script>
+</body>
+</html>
