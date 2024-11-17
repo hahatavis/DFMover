@@ -159,39 +159,17 @@
             <div class="controls">
                 <label><input type="checkbox" id="backgroundToggle"> Use Field Background</label>
                 <label><input type="checkbox" id="gridToggle"> Show Grid Lines</label>
+                <label><input type="checkbox" id="mirageToggle"> Mirage Effect</label> <!-- New Mirage Toggle -->
                 <button id="pause-button">Pause</button>
             </div>
         </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
-    <canvas id="mirageCanvas"></canvas>
 
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const mirageCanvas = document.getElementById('mirageCanvas');
-        const mirageCtx = mirageCanvas.getContext('2d');
-        mirageCanvas.width = canvas.width;
-        mirageCanvas.height = canvas.height;
-        mirageCanvas.style.position = 'absolute';
-        mirageCanvas.style.top = '0';
-        mirageCanvas.style.left = '0';
-        mirageCanvas.style.zIndex = '1';
-        mirageCanvas.style.pointerEvents = 'none';
-        // Game canvas setup
-        canvas.style.position = 'absolute';
-        canvas.style.top = '0';
-        canvas.style.left = '0';
-        canvas.style.zIndex = '0';
-
-        // Mirage canvas setup for layering above the game canvas
-        mirageCanvas.style.position = 'absolute';
-        mirageCanvas.style.top = '0';
-        mirageCanvas.style.left = '0';
-        mirageCanvas.style.zIndex = '1';
-        mirageCanvas.style.pointerEvents = 'none';  // Ensure clicks pass through
-
         const fieldImg = new Image();
         fieldImg.src = 'field.jpg';
 
@@ -209,6 +187,8 @@
         const backgroundToggle = document.getElementById('backgroundToggle');
         const shapeRadios = document.getElementsByName('shape');
         const pauseButton = document.getElementById('pause-button');
+        const mirageToggle = document.getElementById('mirageToggle');
+        let useMirageEffect = false;
 
         let showGridLines = false;
         let useFieldBackground = false;
@@ -237,13 +217,24 @@
         }
 
         function drawBackground() {
-            if (useFieldBackground && fieldImg.complete) {
-                ctx.drawImage(fieldImg, 0, 0, canvas.width, canvas.height);
-                console.log("Drawing field image");
+            if (useFieldBackground) {
+                if (useMirageEffect) {
+                    // Apply a more dynamic mirage effect with time-based distortion
+                    const waveAmplitude = 5; // Adjust for larger waves
+                    const waveFrequency = 0.05;
+                    const timeFactor = Date.now() * 0.002; // Time-based variation for dynamic waves
+
+                    for (let y = 0; y < canvas.height; y += 1) {
+                        const offsetX = Math.sin(y * waveFrequency + timeFactor) * waveAmplitude;
+                        ctx.drawImage(fieldImg, offsetX, y, canvas.width, 1, 0, y, canvas.width, 1);
+                    }
+                } else {
+                    // Draw normal background
+                    ctx.drawImage(fieldImg, 0, 0, canvas.width, canvas.height);
+                }
             } else {
                 ctx.fillStyle = '#556B2F';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
-                console.log("Drawing fallback color");
             }
         }
 
@@ -273,8 +264,6 @@
 
             shapeY = canvas.height / 3;
             updateGroupPositions();
-            mirageCanvas.width = canvas.width;
-            mirageCanvas.height = canvas.height;
         }
 
         function updateGroupPositions() {
@@ -325,32 +314,6 @@
                     ctx.fillRect(x, group.y, squareSize, squareSize);
                 }
             });
-        }
-        let mirageOffset = 0;
-
-        function drawMirageEffect() {
-            mirageCtx.clearRect(0, 0, mirageCanvas.width, mirageCanvas.height);
-
-            mirageCtx.globalAlpha = 0.08;  // Adjust for subtle effect
-            mirageCtx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-            
-            const waveHeight = 10;
-            const waveWidth = 40;
-
-            // Create shimmering waves
-            for (let y = 0; y < mirageCanvas.height; y += waveHeight * 2) {
-                mirageCtx.beginPath();
-                for (let x = 0; x < mirageCanvas.width; x += waveWidth) {
-                    const waveOffset = Math.sin((x + mirageOffset) / 15) * 3;
-                    mirageCtx.rect(x, y + waveOffset, waveWidth, waveHeight);
-                }
-                mirageCtx.fill();
-            }
-
-            mirageOffset += 0.5;
-            if (mirageOffset > waveWidth) mirageOffset = 0;
-
-            mirageCtx.globalAlpha = 1;
         }
 
         function updateShape() {
@@ -423,6 +386,11 @@
             isPaused = !isPaused;
             pauseButton.textContent = isPaused ? 'Resume' : 'Pause';
         });
+
+        mirageToggle.addEventListener('change', function () {
+            useMirageEffect = this.checked;
+        });
+
 
         const toggleButton = document.getElementById('toggle-controls');
         const controlsContainer = document.getElementById('controls-container');
@@ -538,29 +506,19 @@
 
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            drawBackground();           // Draw background first
+            drawBackground();
             if (showGridLines) drawGridLines();
-            drawShape();                 // Draw main shape
-            drawGroups();                // Draw targets/groups
-            updateShape();               // Update target positions
-
-            drawMirageEffect();          // Add mirage effect overlay
-
+            drawShape();
+            drawGroups();
+            updateShape();
             requestAnimationFrame(gameLoop);
         }
-
-
 
         fieldImg.onload = () => {
             resizeCanvas();
             initializeControls();
             gameLoop();
         };
-
-        fieldImg.onerror = () => {
-            console.error("Error loading background image.");
-        };
-
 
         window.addEventListener('resize', resizeCanvas);
     </script>
