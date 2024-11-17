@@ -128,7 +128,7 @@
 
     <!-- Title Text and Toggle Button -->
     <div class="controls-wrapper">
-        <h1>DFMover <span class="version">v1.13</span></h1>
+        <h1>DFMover <span class="version">v2.0</span></h1>
         <button id="toggle-controls">Hide Controls</button>
         <!-- Control box with two stacked controls per section, horizontal across the top -->
         <div class="controls-container" id="controls-container">
@@ -219,25 +219,28 @@
         function drawBackground() {
             if (useFieldBackground) {
                 if (useMirageEffect) {
-                    // Apply a more dynamic mirage effect with time-based distortion
-                    const waveAmplitude = 5; // Adjust for larger waves
-                    const waveFrequency = 0.05;
-                    const timeFactor = Date.now() * 0.002; // Time-based variation for dynamic waves
+                    // Parameters for mirage effect
+                    const waveAmplitude = .8; // Controls the amount of horizontal distortion
+                    const waveFrequency = 0.05; // Controls the frequency of the wave
+                    const timeFactor = Date.now() * 0.02; // Time factor for animated movement
 
-                    for (let y = 0; y < canvas.height; y += 1) {
+                    // Draw each row of the background image with a wavy horizontal offset
+                    for (let y = 0; y < canvas.height; y++) {
                         const offsetX = Math.sin(y * waveFrequency + timeFactor) * waveAmplitude;
+                        
+                        // Draw one row of the image at a time with a horizontal offset
                         ctx.drawImage(fieldImg, offsetX, y, canvas.width, 1, 0, y, canvas.width, 1);
                     }
                 } else {
-                    // Draw normal background
+                    // Draw the background normally if mirage effect is not enabled
                     ctx.drawImage(fieldImg, 0, 0, canvas.width, canvas.height);
                 }
             } else {
+                // If background is disabled, fill with a solid color
                 ctx.fillStyle = '#556B2F';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
         }
-
 
 
         function initializeControls() {
@@ -290,28 +293,87 @@
         function drawShape() {
             const shapeColor = `rgb(${circleColorValue}, ${circleColorValue}, ${circleColorValue})`;
             ctx.fillStyle = shapeColor;
-            ctx.beginPath();
-            if (selectedShape === 'circle') {
-                ctx.arc(shapeX, shapeY, shapeSize, 0, Math.PI * 2, false);
-            } else if (selectedShape === 'square') {
-                ctx.fillRect(shapeX - shapeSize, shapeY - shapeSize, shapeSize * 2, shapeSize * 2);
-            } else if (selectedShape === 'diamond') {
-                ctx.moveTo(shapeX, shapeY - shapeSize);
-                ctx.lineTo(shapeX + shapeSize, shapeY);
-                ctx.lineTo(shapeX, shapeY + shapeSize);
-                ctx.lineTo(shapeX - shapeSize, shapeY);
-                ctx.closePath();
+            ctx.save(); // Save the context state
+
+            if (useMirageEffect) {
+                // Mirage effect parameters
+                const waveAmplitude = .8;  // Small wave for subtle distortion
+                const waveFrequency = 0.05;  // Frequency for shimmering effect
+                const timeFactor = Date.now() * 0.05;  // Time-based animation
+
+                // Apply mirage effect individually to each shape type
+                ctx.beginPath();
+                if (selectedShape === 'circle') {
+                    // Circle: Apply distortion around the perimeter
+                    const points = 100;  // Smoothing level for circle
+                    for (let i = 0; i <= points; i++) {
+                        const angle = (i / points) * 2 * Math.PI;
+                        const distortion = Math.sin(angle * waveFrequency + timeFactor) * waveAmplitude;
+                        const x = shapeX + (shapeSize + distortion) * Math.cos(angle);
+                        const y = shapeY + (shapeSize + distortion) * Math.sin(angle);
+                        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+
+                } else if (selectedShape === 'square') {
+                    // Square: Apply distortion to each corner for a subtle wave effect
+                    const distortion = Math.sin(timeFactor) * waveAmplitude;
+                    ctx.moveTo(shapeX - shapeSize + distortion, shapeY - shapeSize + distortion);
+                    ctx.lineTo(shapeX + shapeSize + distortion, shapeY - shapeSize + distortion);
+                    ctx.lineTo(shapeX + shapeSize + distortion, shapeY + shapeSize + distortion);
+                    ctx.lineTo(shapeX - shapeSize + distortion, shapeY + shapeSize + distortion);
+                    ctx.closePath();
+
+                } else if (selectedShape === 'diamond') {
+                    // Diamond: Apply distortion to each corner
+                    const distortion = Math.sin(timeFactor) * waveAmplitude;
+                    ctx.moveTo(shapeX, shapeY - shapeSize + distortion);
+                    ctx.lineTo(shapeX + shapeSize + distortion, shapeY);
+                    ctx.lineTo(shapeX, shapeY + shapeSize + distortion);
+                    ctx.lineTo(shapeX - shapeSize + distortion, shapeY);
+                    ctx.closePath();
+                }
+            } else {
+                // Draw the shape normally if mirage effect is not enabled
+                ctx.beginPath();
+                if (selectedShape === 'circle') {
+                    ctx.arc(shapeX, shapeY, shapeSize, 0, Math.PI * 2, false);
+                } else if (selectedShape === 'square') {
+                    ctx.fillRect(shapeX - shapeSize, shapeY - shapeSize, shapeSize * 2, shapeSize * 2);
+                } else if (selectedShape === 'diamond') {
+                    ctx.moveTo(shapeX, shapeY - shapeSize);
+                    ctx.lineTo(shapeX + shapeSize, shapeY);
+                    ctx.lineTo(shapeX, shapeY + shapeSize);
+                    ctx.lineTo(shapeX - shapeSize, shapeY);
+                    ctx.closePath();
+                }
             }
             ctx.fill();
+            ctx.restore(); // Restore the context to remove transformations
         }
 
         function drawGroups() {
+            // Mirage effect parameters
+            const waveAmplitude = 0.8; // Subtle horizontal distortion
+            const waveFrequency = 0.05; // Frequency for the wave pattern
+            const timeFactor = Date.now() * 0.02; // Speed of animated movement
+
             groups.forEach(group => {
                 for (let i = 0; i < 5; i++) {
                     const squareSize = group.size - i * 5;
-                    const x = group.xStart + i * (group.size + 15);
-                    ctx.fillStyle = group.color;
-                    ctx.fillRect(x, group.y, squareSize, squareSize);
+                    const xStart = group.xStart + i * (group.size + 15);
+
+                    // Draw each row of the square with mirage effect only if enabled
+                    for (let y = 0; y < squareSize; y++) {
+                        // Apply mirage effect if enabled; otherwise, no distortion
+                        const offsetX = useMirageEffect 
+                            ? Math.sin((group.y + y) * waveFrequency + timeFactor) * waveAmplitude 
+                            : 0;
+
+                        // Draw each row of the square with or without mirage effect
+                        ctx.fillStyle = group.color;
+                        ctx.fillRect(xStart + offsetX, group.y + y, squareSize, 1);
+                    }
                 }
             });
         }
