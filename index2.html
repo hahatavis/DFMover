@@ -378,6 +378,29 @@
             });
         }
 
+        function drawMirageLines() {
+            if (!useMirageEffect) return; // Only draw lines if mirage effect is enabled
+
+            const lineOpacity = 0.1; // 90% transparent (10% visible)
+            const waveAmplitude = 1; // Subtle horizontal distortion for lines
+            const waveFrequency = 0.1; // Frequency for the wave pattern
+            const timeFactor = Date.now() * 0.01; // Speed of animated movement
+
+            ctx.strokeStyle = `rgba(255, 255, 255, ${lineOpacity})`; // White with reduced opacity
+            ctx.lineWidth = 1;
+
+            for (let y = 0; y < canvas.height; y += 20) { // Draw lines every 20 pixels vertically
+                ctx.beginPath();
+                for (let x = 0; x <= canvas.width; x += 10) {
+                    // Apply a time-based wave distortion to each point in the line
+                    const offsetX = Math.sin((x * waveFrequency) + (y * 0.1) + timeFactor) * waveAmplitude;
+                    ctx.lineTo(x + offsetX, y);
+                }
+                ctx.stroke();
+            }
+        }
+
+
         function updateShape() {
             if (isPaused || isDragging) return;
 
@@ -573,6 +596,7 @@
             drawShape();
             drawGroups();
             updateShape();
+            drawMirageLines(); // Call this last to overlay the lines
             requestAnimationFrame(gameLoop);
         }
 
