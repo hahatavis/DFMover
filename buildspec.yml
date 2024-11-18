@@ -1,0 +1,10 @@
+version: 0.2
+
+phases:
+  build:
+    commands:
+      - echo "Building beta release"
+
+artifacts:
+  files:
+    - beta.html
