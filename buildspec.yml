@@ -3,8 +3,9 @@ version: 0.2
 phases:
   build:
     commands:
-      - echo "Building beta release"
+      - echo "Preparing beta release for deployment"
 
 artifacts:
   files:
     - beta.html
+  discard-paths: yes  # Ensures only `beta.html` without any path
