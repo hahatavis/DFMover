@@ -1,11 +1,18 @@
 version: 0.2
 
 phases:
+  install:
+    runtime-versions:
+      nodejs: 14 # Or whichever version you need
+    commands:
+      - echo "Installing dependencies if needed"
+      - npm install -g aws-cli  # Install AWS CLI if it's not already installed
+
   build:
     commands:
-      - echo "Preparing beta release for deployment"
+      - echo "Building beta release"
 
-artifacts:
-  files:
-    - beta.html
-  discard-paths: yes  # Ensures only `beta.html` without any path
+  post_build:
+    commands:
+      - echo "Copying beta.html to S3"
+      - aws s3 cp beta.html s3://newguyprecisiontx/beta.html --acl public-read
