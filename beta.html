@@ -381,25 +381,27 @@
         function drawMirageLines() {
             if (!useMirageEffect) return; // Only draw lines if mirage effect is enabled
 
-            const lineOpacity = 0.1; // 90% transparent (10% visible)
-            const waveAmplitude = 1; // Subtle horizontal distortion for lines
-            const waveFrequency = 0.1; // Frequency for the wave pattern
-            const timeFactor = Date.now() * 0.01; // Speed of animated movement
+            const waveAmplitude = 3; // Amplitude of the wave (height of peaks)
+            const waveFrequency = 0.2; // Frequency of the wave (distance between peaks)
+            const timeFactor = Date.now() * 0.01; // Base animation over time
+            const verticalSpeed = 0.5; // Speed of upward motion
+            const boilFactor = Math.sin(Date.now() * 0.002) * 20; // Boil effect moves waves back and forth
+            const lineOpacity = 0.3; // Fixed opacity (50%)
 
-            ctx.strokeStyle = `rgba(255, 255, 255, ${lineOpacity})`; // White with reduced opacity
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = `rgba(255, 255, 255, ${lineOpacity})`; // Set opacity dynamically
+            ctx.lineWidth = 1; // Thinner lines for subtle effect
 
-            for (let y = 0; y < canvas.height; y += 20) { // Draw lines every 20 pixels vertically
+            for (let yOffset = 0; yOffset < canvas.height; yOffset += 20) { // Lines spaced 20px apart
+                const y = (canvas.height - ((Date.now() * verticalSpeed + yOffset) % canvas.height)); // Moves up and wraps around
+
                 ctx.beginPath();
-                for (let x = 0; x <= canvas.width; x += 10) {
-                    // Apply a time-based wave distortion to each point in the line
-                    const offsetX = Math.sin((x * waveFrequency) + (y * 0.1) + timeFactor) * waveAmplitude;
-                    ctx.lineTo(x + offsetX, y);
+                for (let x = 0; x <= canvas.width; x += 1) { // Increment by 1 for smooth waves
+                    const offsetX = Math.sin((x * waveFrequency) + timeFactor + boilFactor) * waveAmplitude;
+                    ctx.lineTo(x, y + offsetX); // Apply distortion to the vertical position
                 }
-                ctx.stroke();
+                ctx.stroke(); // Render the line
             }
         }
-
 
         function updateShape() {
             if (isPaused || isDragging) return;
