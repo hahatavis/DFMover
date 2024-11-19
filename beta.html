@@ -207,6 +207,11 @@
         let shapeY = canvas.height / 3;
         let shapeSpeed;
         let direction = 1;
+
+        let draggingTarget = null; // The target currently being dragged
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+
         const maxSpeedAt7 = 7;
 
         const pauseDuration = 300; // Pause duration in milliseconds
@@ -258,6 +263,14 @@
             { size: 20, xStart: 550, y: canvas.height - 50, color: 'rgb(212, 212, 212)' }
         ];
 
+        const ipscTargets = [
+            { size: 0.15, xStart: 800, y: canvas.height - 250, isDragging: false }, // Full-size target
+            { size: 0.1, xStart: 950, y: canvas.height - 250, isDragging: false }, // 66% size
+            { size: 0.05, xStart: 1100, y: canvas.height - 250, isDragging: false }, // 33% size
+        ];
+
+
+
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
@@ -267,6 +280,7 @@
 
             shapeY = canvas.height / 3;
             updateGroupPositions();
+            updateIPSCPositions(); // Update IPSC positions
         }
 
         function updateGroupPositions() {
@@ -275,6 +289,12 @@
             groups[2].y = canvas.height - 50;
         }
 
+        function updateIPSCPositions() {
+            ipscTargets[0].y = canvas.height - 250;
+            ipscTargets[1].y = canvas.height - 250;
+            ipscTargets[2].y = canvas.height - 250;
+        }
+            
         function drawGridLines() {
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 1;
@@ -378,6 +398,36 @@
             });
         }
 
+        function drawIPSC(x, y, scale) {
+            const width = 450 * scale; // Full-width of the IPSC target
+            const height = 710 * scale; // Full-height of the IPSC target
+            const headHeight = 150 * scale; // Height of the head section
+
+            ctx.fillStyle = 'tan'; // Base color for IPSC targets
+            ctx.strokeStyle = 'black'; // Outline color
+            ctx.lineWidth = 1;
+
+            // Draw head (rectangle)
+            ctx.beginPath();
+            ctx.moveTo(x - width * 0.25, y); // Top-left of head
+            ctx.lineTo(x + width * 0.25, y); // Top-right of head
+            ctx.lineTo(x + width * 0.25, y + headHeight); // Bottom-right of head
+            ctx.lineTo(x - width * 0.25, y + headHeight); // Bottom-left of head
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Draw body (pentagon)
+            ctx.beginPath();
+            ctx.moveTo(x - width * 0.5, y + headHeight); // Top-left of body
+            ctx.lineTo(x + width * 0.5, y + headHeight); // Top-right of body
+            ctx.lineTo(x + width * 0.25, y + height); // Bottom-right of body
+            ctx.lineTo(x - width * 0.25, y + height); // Bottom-left of body
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
         function drawMirageLines() {
             if (!useMirageEffect) return; // Only draw lines if mirage effect is enabled
 
@@ -428,6 +478,11 @@
             shapeX += direction * shapeSpeed;
         }
 
+        function updateIPSC() {
+            ipscTargets.forEach((target) => {
+                drawIPSC(target.xStart, target.y, target.size); // Draw each IPSC target
+            });
+        }
 
 
         speedRange.addEventListener('input', function () {
@@ -485,6 +540,46 @@
             controlsContainer.classList.toggle('hidden');
             toggleButton.textContent = controlsContainer.classList.contains('hidden') ? 'Show Controls' : 'Hide Controls';
         });
+
+        canvas.addEventListener('mousedown', (event) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = event.clientX - rect.left;
+            const mouseY = event.clientY - rect.top;
+
+            ipscTargets.forEach((target) => {
+                const width = 450 * target.size;
+                const height = 710 * target.size;
+
+                // Check if the mouse is within the target's bounds
+                if (
+                    mouseX > target.xStart - width * 0.5 &&
+                    mouseX < target.xStart + width * 0.5 &&
+                    mouseY > target.y &&
+                    mouseY < target.y + height
+                ) {
+                    draggingTarget = target;
+                    dragOffsetX = mouseX - target.xStart;
+                    dragOffsetY = mouseY - target.y;
+                }
+            });
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (draggingTarget) {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = event.clientX - rect.left;
+                const mouseY = event.clientY - rect.top;
+
+                // Update the target's position
+                draggingTarget.xStart = mouseX - dragOffsetX;
+                draggingTarget.y = mouseY - dragOffsetY;
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            draggingTarget = null; // Stop dragging
+        });
+
 
         canvas.addEventListener('mousedown', function (event) {
             const rect = canvas.getBoundingClientRect();
@@ -597,6 +692,8 @@
             if (showGridLines) drawGridLines();
             drawShape();
             drawGroups();
+            updateShape();
+            updateIPSC(); // Update and draw IPSC targets
             updateShape();
             drawMirageLines(); // Call this last to overlay the lines
             requestAnimationFrame(gameLoop);
