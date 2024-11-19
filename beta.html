@@ -264,10 +264,11 @@
         ];
 
         const ipscTargets = [
-            { size: 0.15, xStart: 800, y: canvas.height - 250, isDragging: false }, // Full-size target
-            { size: 0.1, xStart: 950, y: canvas.height - 250, isDragging: false }, // 66% size
-            { size: 0.05, xStart: 1100, y: canvas.height - 250, isDragging: false }, // 33% size
+            { size: 9, xStart: 800, y: canvas.height - 250, color: 'rgb(212, 212, 212)', isDragging: false },
+            { size: 6, xStart: 950, y: canvas.height - 250, color: 'rgb(212, 212, 212)', isDragging: false },
+            { size: 3, xStart: 1100, y: canvas.height - 250, color: 'rgb(212, 212, 212)', isDragging: false }
         ];
+
 
 
 
@@ -398,35 +399,34 @@
             });
         }
 
-        function drawIPSC(x, y, scale) {
-            const width = 450 * scale; // Full-width of the IPSC target
-            const height = 710 * scale; // Full-height of the IPSC target
-            const headHeight = 150 * scale; // Height of the head section
+        function drawIPSC(x, y, scale, color) {
+            const width = 450 * (scale / 100); // Full width of the torso
+            const height = 710 * (scale / 100); // Full height of the IPSC target
+            const headHeight = 150 * (scale / 100); // Height of the head section
+            const torsoWidth = 450 * (scale / 100); // Full width of the torso
+            const headWidth = 225 * (scale / 100); // Width of the head (50% of the torso width)
 
-            ctx.fillStyle = 'tan'; // Base color for IPSC targets
-            ctx.strokeStyle = 'black'; // Outline color
-            ctx.lineWidth = 1;
+            ctx.fillStyle = color; // Use the specified color
 
             // Draw head (rectangle)
             ctx.beginPath();
-            ctx.moveTo(x - width * 0.25, y); // Top-left of head
-            ctx.lineTo(x + width * 0.25, y); // Top-right of head
-            ctx.lineTo(x + width * 0.25, y + headHeight); // Bottom-right of head
-            ctx.lineTo(x - width * 0.25, y + headHeight); // Bottom-left of head
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            ctx.moveTo(x - headWidth / 2, y); // Top-left of head
+            ctx.lineTo(x + headWidth / 2, y); // Top-right of head
+            ctx.lineTo(x + headWidth / 2, y + headHeight); // Bottom-right of head
+            ctx.lineTo(x - headWidth / 2, y + headHeight); // Bottom-left of head
+            ctx.closePath(); // Ensure path is closed before filling
+            ctx.fill(); // Fill the head shape
 
-            // Draw body (pentagon)
+            // Draw torso (rectangle)
             ctx.beginPath();
-            ctx.moveTo(x - width * 0.5, y + headHeight); // Top-left of body
-            ctx.lineTo(x + width * 0.5, y + headHeight); // Top-right of body
-            ctx.lineTo(x + width * 0.25, y + height); // Bottom-right of body
-            ctx.lineTo(x - width * 0.25, y + height); // Bottom-left of body
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
+            ctx.moveTo(x - torsoWidth / 2, y + headHeight); // Top-left of torso
+            ctx.lineTo(x + torsoWidth / 2, y + headHeight); // Top-right of torso
+            ctx.lineTo(x + torsoWidth / 2, y + height); // Bottom-right of torso
+            ctx.lineTo(x - torsoWidth / 2, y + height); // Bottom-left of torso
+            ctx.closePath(); // Ensure path is closed before filling
+            ctx.fill(); // Fill the torso shape
         }
+
 
         function drawMirageLines() {
             if (!useMirageEffect) return; // Only draw lines if mirage effect is enabled
@@ -480,10 +480,9 @@
 
         function updateIPSC() {
             ipscTargets.forEach((target) => {
-                drawIPSC(target.xStart, target.y, target.size); // Draw each IPSC target
+                drawIPSC(target.xStart, target.y, target.size, target.color);
             });
         }
-
 
         speedRange.addEventListener('input', function () {
             shapeSpeed = mapSpeed(parseInt(this.value));
@@ -546,14 +545,16 @@
             const mouseX = event.clientX - rect.left;
             const mouseY = event.clientY - rect.top;
 
+            draggingTarget = null; // Reset dragging target
+
             ipscTargets.forEach((target) => {
-                const width = 450 * target.size;
-                const height = 710 * target.size;
+                const width = 450 * (target.size / 100);
+                const height = 710 * (target.size / 100);
 
                 // Check if the mouse is within the target's bounds
                 if (
-                    mouseX > target.xStart - width * 0.5 &&
-                    mouseX < target.xStart + width * 0.5 &&
+                    mouseX > target.xStart - width / 2 &&
+                    mouseX < target.xStart + width / 2 &&
                     mouseY > target.y &&
                     mouseY < target.y + height
                 ) {
@@ -577,7 +578,7 @@
         });
 
         canvas.addEventListener('mouseup', () => {
-            draggingTarget = null; // Stop dragging
+            draggingTarget = null; // Stop dragging when mouse button is released
         });
 
 
