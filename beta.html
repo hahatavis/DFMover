@@ -408,23 +408,46 @@
 
             ctx.fillStyle = color; // Use the specified color
 
+            // Mirage effect parameters
+            const waveAmplitude = 1; // Slight distortion
+            const waveFrequency = 1; // Frequency of the wave
+            const timeFactor = Date.now() * 0.02; // Animation over time
+
+            // Calculate mirage offset if enabled
+            const mirageOffset = (yPosition) =>
+                useMirageEffect
+                    ? Math.sin((yPosition + timeFactor) * waveFrequency) * waveAmplitude
+                    : 0;
+
             // Draw head (rectangle)
             ctx.beginPath();
-            ctx.moveTo(x - headWidth / 2, y); // Top-left of head
-            ctx.lineTo(x + headWidth / 2, y); // Top-right of head
-            ctx.lineTo(x + headWidth / 2, y + headHeight); // Bottom-right of head
-            ctx.lineTo(x - headWidth / 2, y + headHeight); // Bottom-left of head
-            ctx.closePath(); // Ensure path is closed before filling
-            ctx.fill(); // Fill the head shape
+            ctx.moveTo(x - headWidth / 2 + mirageOffset(y), y); // Top-left of head
+            ctx.lineTo(x + headWidth / 2 + mirageOffset(y), y); // Top-right of head
+            ctx.lineTo(
+                x + headWidth / 2 + mirageOffset(y + headHeight),
+                y + headHeight
+            ); // Bottom-right of head
+            ctx.lineTo(
+                x - headWidth / 2 + mirageOffset(y + headHeight),
+                y + headHeight
+            ); // Bottom-left of head
+            ctx.closePath();
+            ctx.fill();
 
             // Draw torso (rectangle)
             ctx.beginPath();
-            ctx.moveTo(x - torsoWidth / 2, y + headHeight); // Top-left of torso
-            ctx.lineTo(x + torsoWidth / 2, y + headHeight); // Top-right of torso
-            ctx.lineTo(x + torsoWidth / 2, y + height); // Bottom-right of torso
-            ctx.lineTo(x - torsoWidth / 2, y + height); // Bottom-left of torso
-            ctx.closePath(); // Ensure path is closed before filling
-            ctx.fill(); // Fill the torso shape
+            ctx.moveTo(
+                x - torsoWidth / 2 + mirageOffset(y + headHeight),
+                y + headHeight
+            ); // Top-left of torso
+            ctx.lineTo(
+                x + torsoWidth / 2 + mirageOffset(y + headHeight),
+                y + headHeight
+            ); // Top-right of torso
+            ctx.lineTo(x + torsoWidth / 2 + mirageOffset(y + height), y + height); // Bottom-right of torso
+            ctx.lineTo(x - torsoWidth / 2 + mirageOffset(y + height), y + height); // Bottom-left of torso
+            ctx.closePath();
+            ctx.fill();
         }
 
 
