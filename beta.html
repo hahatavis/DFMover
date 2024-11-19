@@ -264,9 +264,9 @@
         ];
 
         const ipscTargets = [
-            { size: 9, xStart: 800, y: canvas.height - 250, color: 'rgb(212, 212, 212)', isDragging: false },
-            { size: 6, xStart: 950, y: canvas.height - 250, color: 'rgb(212, 212, 212)', isDragging: false },
-            { size: 3, xStart: 1100, y: canvas.height - 250, color: 'rgb(212, 212, 212)', isDragging: false }
+            { size: 9, xStart: 600, y: canvas.height - 250, color: 'rgb(212, 212, 212)', isDragging: false },
+            { size: 6, xStart: 650, y: canvas.height - 250, color: 'rgb(212, 212, 212)', isDragging: false },
+            { size: 3, xStart: 700, y: canvas.height - 250, color: 'rgb(212, 212, 212)', isDragging: false }
         ];
 
 
@@ -673,87 +673,76 @@
             const clickX = clientX - rect.left;
             const clickY = clientY - rect.top;
 
-            const distanceFromShape = Math.sqrt((clickX - shapeX) ** 2 + (clickY - shapeY) ** 2);
-            if (distanceFromShape < shapeSize) {
-                isDragging = true;
-                return;
-            }
-
-            groups.forEach(group => {
-                if (
-                    clickX >= group.xStart &&
-                    clickX <= group.xStart + group.size * 5 &&
-                    clickY >= group.y &&
-                    clickY <= group.y + group.size
-                ) {
-                    isDraggingGroup = true;
-                    draggedGroup = group;
-                }
-            });
-        }
-
-        function handleMove(clientX, clientY) {
-            const rect = canvas.getBoundingClientRect();
-            if (isDragging) {
-                shapeY = clientY - rect.top;
-            }
-            if (isDraggingGroup && draggedGroup) {
-                draggedGroup.xStart = clientX - rect.left - draggedGroup.size / 2;
-                draggedGroup.y = clientY - rect.top - draggedGroup.size / 2;
-            }
-        }
-
-        function handleEnd() {
+            // Reset dragging states
+            draggingIPSC = null;
             isDragging = false;
             isDraggingGroup = false;
-            draggedGroup = null;
-        }
-        function handleTouchStart(event) {
-            const touch = event.touches[0]; // Get the first touch point
-            const rect = canvas.getBoundingClientRect();
-            const touchX = touch.clientX - rect.left;
-            const touchY = touch.clientY - rect.top;
 
-            draggingTarget = null; // Reset dragging target
-
+            // Check if touch/mouse is on an IPSC target
             ipscTargets.forEach((target) => {
                 const width = 450 * (target.size / 100);
                 const height = 710 * (target.size / 100);
 
-                // Check if the touch is within the target's bounds
                 if (
-                    touchX > target.xStart - width / 2 &&
-                    touchX < target.xStart + width / 2 &&
-                    touchY > target.y &&
-                    touchY < target.y + height
+                    clickX > target.xStart - width / 2 &&
+                    clickX < target.xStart + width / 2 &&
+                    clickY > target.y &&
+                    clickY < target.y + height
                 ) {
-                    draggingTarget = target;
-                    dragOffsetX = touchX - target.xStart;
-                    dragOffsetY = touchY - target.y;
+                    draggingIPSC = target;
+                    dragOffsetX = clickX - target.xStart;
+                    dragOffsetY = clickY - target.y;
                 }
             });
-            event.preventDefault(); // Prevent scrolling
-        }
 
-        function handleTouchMove(event) {
-            if (draggingTarget) {
-                const touch = event.touches[0];
-                const rect = canvas.getBoundingClientRect();
-                const touchX = touch.clientX - rect.left;
-                const touchY = touch.clientY - rect.top;
+            // If not an IPSC target, check for shapes and groups
+            if (!draggingIPSC) {
+                const distanceFromShape = Math.sqrt((clickX - shapeX) ** 2 + (clickY - shapeY) ** 2);
+                if (distanceFromShape < shapeSize) {
+                    isDragging = true;
+                    return;
+                }
 
-                // Update the target's position
-                draggingTarget.xStart = touchX - dragOffsetX;
-                draggingTarget.y = touchY - dragOffsetY;
-
-                event.preventDefault(); // Prevent scrolling
+                groups.forEach(group => {
+                    if (
+                        clickX >= group.xStart &&
+                        clickX <= group.xStart + group.size * 5 &&
+                        clickY >= group.y &&
+                        clickY <= group.y + group.size
+                    ) {
+                        isDraggingGroup = true;
+                        draggedGroup = group;
+                    }
+                });
             }
         }
 
-        function handleTouchEnd() {
-            draggingTarget = null; // Stop dragging when touch ends
+        function handleMove(clientX, clientY) {
+            const rect = canvas.getBoundingClientRect();
+            const moveX = clientX - rect.left;
+            const moveY = clientY - rect.top;
+
+            if (draggingIPSC) {
+                // Dragging an IPSC target
+                draggingIPSC.xStart = moveX - dragOffsetX;
+                draggingIPSC.y = moveY - dragOffsetY;
+            } else if (isDragging) {
+                // Dragging the main shape
+                shapeY = moveY;
+            } else if (isDraggingGroup && draggedGroup) {
+                // Dragging a group
+                draggedGroup.xStart = moveX - draggedGroup.size / 2;
+                draggedGroup.y = moveY - draggedGroup.size / 2;
+            }
         }
 
+
+        function handleEnd() {
+            draggingIPSC = null; // Stop dragging IPSC targets
+            isDragging = false;
+            isDraggingGroup = false;
+            draggedGroup = null;
+        }
 
         function gameLoop() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
