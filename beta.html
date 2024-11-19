@@ -157,7 +157,7 @@
             </div>
             <!-- Background Toggle, Gridlines Toggle, and Pause Button -->
             <div class="controls">
-                <label><input type="checkbox" id="backgroundToggle"> Use Field Background</label>
+                <label><input type="checkbox" id="backgroundToggle" checked> Use Field Background</label> <!-- Default checked -->
                 <label><input type="checkbox" id="gridToggle"> Show Grid Lines</label>
                 <label><input type="checkbox" id="mirageToggle"> Mirage Effect (Beta)</label> <!-- New Mirage Toggle -->
                 <button id="pause-button">Pause</button>
@@ -191,7 +191,7 @@
         let useMirageEffect = false;
 
         let showGridLines = false;
-        let useFieldBackground = false;
+        let useFieldBackground = document.getElementById('backgroundToggle').checked; // Initialize based on checkbox state
         let circleColorValue = 212;
         let leftLimitPercentage = 0;
         let rightLimitPercentage = 100;
